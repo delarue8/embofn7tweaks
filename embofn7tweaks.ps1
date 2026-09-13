@@ -18,8 +18,7 @@ function Get-CodeHash {
 }
 
 $ValidCodeHashes = @{
-    "cbb3984897d2d38da6b494fd105397fadde03b5e272c0cc50c9342d9f4176a74" = "Bruder"
-    "b99281fb5342d5600fdc85b8770e78d1c27912dcc38b1a53f7de4b64ce4a97e2" = "Testperson"
+    "300BAE6EECD026A95312E77A65E2AAE2E5B4B9886817A65851066EAB49799FAC" = "Admin"
 }
 
 function Show-CodeGate {
