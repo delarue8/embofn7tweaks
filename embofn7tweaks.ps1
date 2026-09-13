@@ -1,20 +1,7 @@
 #Requires -RunAsAdministrator
-<#
-    embofn7tweaks.ps1
-    Eigenstaendiges Windows-Tweak-Tool (GUI) - by embofn7
-    Enthaelt dieselben Funktionsgruppen wie das "SAFE"-Preset aus unknowntweaks,
-    komplett neu geschrieben mit eigenem Code / eigener Oberflaeche.
-
-    Start:  powershell -ExecutionPolicy Bypass -File .\embofn7tweaks.ps1
-    (in einem PowerShell-Fenster, das ALS ADMINISTRATOR laeuft)
-#>
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-
-# ---------------------------------------------------------------------------
-#  Farbschema (schwarz/rot, angelehnt an TikTok-Profilbild @embofn7)
-# ---------------------------------------------------------------------------
 
 $ColorBg      = [System.Drawing.Color]::FromArgb(12,12,12)
 $ColorPanelBg = [System.Drawing.Color]::FromArgb(20,20,20)
@@ -23,17 +10,6 @@ $ColorRedDark = [System.Drawing.Color]::FromArgb(90,10,10)
 $ColorText    = [System.Drawing.Color]::White
 $ColorTextDim = [System.Drawing.Color]::FromArgb(180,180,180)
 
-# ---------------------------------------------------------------------------
-#  Zugangscodes (von dir gepflegte Liste: SHA256-Hash des Codes -> Name)
-#  Codes selbst stehen NICHT im Klartext im Script.
-#
-#  Neuen Code hinzufuegen:
-#   1. In PowerShell ausfuehren:
-#      $c = "DEIN-NEUER-CODE"
-#      [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($c))) -replace "-",""
-#   2. Den ausgegebenen Hash unten mit dem Namen der Person eintragen.
-# ---------------------------------------------------------------------------
-
 function Get-CodeHash {
     param([string]$Code)
     $sha = [System.Security.Cryptography.SHA256]::Create()
@@ -41,10 +17,9 @@ function Get-CodeHash {
     return ([System.BitConverter]::ToString($bytes) -replace "-","").ToLower()
 }
 
-# Beispiel-Hashes fuer "EMBO-0001" und "EMBO-0002" - ersetze/ergaenze mit deinen eigenen Hashes
 $ValidCodeHashes = @{
-    "300BAE6EECD026A95312E77A65E2AAE2E5B4B9886817A65851066EAB49799FAC" = "Admin"
-    # weitere: "DEIN-HASH-HIER" = "Name"
+    "cbb3984897d2d38da6b494fd105397fadde03b5e272c0cc50c9342d9f4176a74" = "Bruder"
+    "b99281fb5342d5600fdc85b8770e78d1c27912dcc38b1a53f7de4b64ce4a97e2" = "Testperson"
 }
 
 function Show-CodeGate {
@@ -116,10 +91,6 @@ if (-not (Show-CodeGate)) {
     exit
 }
 
-# ---------------------------------------------------------------------------
-#  Setup / Logging / Backup
-# ---------------------------------------------------------------------------
-
 $AppName    = "embofn7tweaks"
 $LogFolder  = "$env:LOCALAPPDATA\$AppName"
 $BackupFile = Join-Path $LogFolder "backup.json"
@@ -185,10 +156,6 @@ function Restore-RegValueTracked {
     }
 }
 
-# ---------------------------------------------------------------------------
-#  Restore point
-# ---------------------------------------------------------------------------
-
 function New-SystemRestorePoint {
     try {
         Enable-ComputerRestore -Drive "$env:SystemDrive\" -ErrorAction SilentlyContinue
@@ -213,10 +180,6 @@ function Get-FortniteExePath {
     }
     return $null
 }
-
-# ---------------------------------------------------------------------------
-#  Tweak definitions: Id | Label | Apply-Block | Undo note
-# ---------------------------------------------------------------------------
 
 $Tweaks = @(
     @{
@@ -363,7 +326,6 @@ $Tweaks = @(
         Apply = {
             powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2>$null
             if ($LASTEXITCODE -ne 0) {
-                # Plan evtl. ausgeblendet, erst sichtbar machen
                 powercfg -attributes SUB_PROCESSOR PROCTHROTTLEMIN -ATTRIB_HIDE 2>$null
                 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
             }
@@ -564,11 +526,6 @@ $Tweaks = @(
     }
 )
 
-# ---------------------------------------------------------------------------
-#  Fortnite-spezifische Funktionen
-#  (Config-Datei liegt immer hier, unabhaengig vom Install-Pfad)
-# ---------------------------------------------------------------------------
-
 $FortniteIniPath = "$env:LOCALAPPDATA\FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini"
 $FortniteBackupPath = "$FortniteIniPath.embofn7bak"
 
@@ -629,8 +586,6 @@ function Set-FortniteProfile {
     $section = "/Script/FortniteGame.FortGameUserSettings"
     $lines = [System.Collections.Generic.List[string]](Get-Content -Path $FortniteIniPath)
 
-    # Vier Profile, angelehnt an die Presets von unknowntweaks.
-    # Werte sind dokumentierte, seit Jahren stabile sg.* Grafik-Keys.
     $profiles = @{
         "MaxFPS" = @{
             "sg.ResolutionQuality" = "100"; "sg.ViewDistanceQuality" = "0"; "sg.AntiAliasingQuality" = "0"
@@ -696,10 +651,6 @@ function Restore-FortniteIni {
     }
 }
 
-# ---------------------------------------------------------------------------
-#  GUI
-# ---------------------------------------------------------------------------
-
 $form                 = New-Object System.Windows.Forms.Form
 $form.Text            = "embofn7tweaks"
 $form.Size            = New-Object System.Drawing.Size(950, 720)
@@ -723,8 +674,6 @@ $userLbl.ForeColor = $ColorTextDim
 $userLbl.AutoSize = $true
 $userLbl.Location = New-Object System.Drawing.Point(730,15)
 $form.Controls.Add($userLbl)
-
-# --- Linke Spalte: Live-Systemstats -----------------------------------------
 
 function New-StatBlock {
     param([string]$LabelText, [int]$Y)
@@ -793,7 +742,6 @@ Add-GraphPaintHandler $statGpu 100
 Add-GraphPaintHandler $statDisk 100
 Add-GraphPaintHandler $statNet 100000   # ~100 MB/s als Obergrenze fuer die Skala
 
-# Performance-Counter vorbereiten (koennen auf manchen Systemen fehlschlagen -> try/catch)
 try { $cpuCounter = New-Object System.Diagnostics.PerformanceCounter("Processor", "% Processor Time", "_Total"); $cpuCounter.NextValue() | Out-Null } catch { $cpuCounter = $null }
 try { $diskCounter = New-Object System.Diagnostics.PerformanceCounter("PhysicalDisk", "% Disk Time", "_Total"); $diskCounter.NextValue() | Out-Null } catch { $diskCounter = $null }
 try {
@@ -806,7 +754,6 @@ try {
 $statTimer = New-Object System.Windows.Forms.Timer
 $statTimer.Interval = 1500
 $statTimer.Add_Tick({
-    # CPU
     try {
         $cpuVal = if ($cpuCounter) { [Math]::Round($cpuCounter.NextValue(), 0) } else { $null }
     } catch { $cpuVal = $null }
@@ -815,7 +762,6 @@ $statTimer.Add_Tick({
         [void]$statCpu.History.Add($cpuVal)
     } else { $statCpu.ValueLabel.Text = "n/a" }
 
-    # RAM
     try {
         $os = Get-CimInstance Win32_OperatingSystem
         $totalGb = [Math]::Round($os.TotalVisibleMemorySize / 1MB, 1)
@@ -826,7 +772,6 @@ $statTimer.Add_Tick({
         [void]$statRam.History.Add($ramPct)
     } catch { $statRam.ValueLabel.Text = "n/a" }
 
-    # GPU (ueber GPU Engine Utilization, nicht auf allen Systemen verfuegbar)
     try {
         $gpuSamples = (Get-Counter '\GPU Engine(*engtype_3D)\Utilization Percentage' -ErrorAction Stop).CounterSamples
         $gpuVal = [Math]::Round((($gpuSamples | Measure-Object CookedValue -Sum).Sum), 0)
@@ -835,7 +780,6 @@ $statTimer.Add_Tick({
         [void]$statGpu.History.Add($gpuVal)
     } catch { $statGpu.ValueLabel.Text = "n/a" }
 
-    # Disk
     try {
         $diskVal = if ($diskCounter) { [Math]::Round($diskCounter.NextValue(), 0) } else { $null }
         if ($diskVal -gt 100) { $diskVal = 100 }
@@ -845,7 +789,6 @@ $statTimer.Add_Tick({
         [void]$statDisk.History.Add($diskVal)
     } else { $statDisk.ValueLabel.Text = "n/a" }
 
-    # Netzwerk
     try {
         $totalBytes = 0
         foreach ($nc in $netCounters) { $totalBytes += $nc.NextValue() }
@@ -860,8 +803,6 @@ $statTimer.Add_Tick({
     }
 })
 $statTimer.Start()
-
-# --- Tab-Umschalter: TWEAKS / FORTNITE --------------------------------------
 
 $tabControl = New-Object System.Windows.Forms.TabControl
 $tabControl.Location = New-Object System.Drawing.Point(320,45)
@@ -887,8 +828,6 @@ $tabInfo = New-Object System.Windows.Forms.TabPage
 $tabInfo.Text = "INFO"
 $tabInfo.BackColor = $ColorBg
 $tabControl.Controls.Add($tabInfo)
-
-# --- Inhalt Tab TWEAKS -------------------------------------------------------
 
 $checkAll = New-Object System.Windows.Forms.CheckBox
 $checkAll.Text = "SAFE-Preset auswaehlen (empfohlen)"
@@ -955,8 +894,6 @@ $checkAll.Add_CheckedChanged({
         if ($tier -eq "SAFE") { $checkBoxes[$tweak.Id].Checked = $checkAll.Checked }
     }
 })
-
-# --- FORTNITE-Bereich unten in der Tweaks-Liste (statt eigenem Tab) --------
 
 $y += 15
 $fnHeader = New-Object System.Windows.Forms.Label
@@ -1192,11 +1129,6 @@ $footer.AutoSize = $true
 $footer.Location = New-Object System.Drawing.Point(790,655)
 $form.Controls.Add($footer)
 
-# --- Inhalt Tab NETWORK ------------------------------------------------------
-# Hinweis: es gibt keine offiziellen Fortnite-Server-IPs pro Region.
-# Diese Werte sind eine ANNAEHERUNG ueber bekannte oeffentliche Anycast-Knoten
-# in der jeweiligen Gegend, kein exakter In-Game-Ping.
-
 $netRegions = @(
     @{ Name = "Internet (Cloudflare)"; Host = "1.1.1.1" }
     @{ Name = "Europe"; Host = "185.228.168.9" }
@@ -1368,9 +1300,6 @@ $dnsResetBtn.Add_Click({
     }
 })
 
-# --- Inhalt Tab GAME READY ----------------------------------------------------
-# Checkbox angehakt = wird beim Klick auf "Close selected" beendet.
-
 $grHeader = New-Object System.Windows.Forms.Label
 $grHeader.Text = "Laufende Programme mit Fenster"
 $grHeader.ForeColor = $ColorRed
@@ -1449,8 +1378,6 @@ $grCloseBtn.Add_Click({
     Write-Log "Game Ready: $closed Programm(e) geschlossen."
     Update-GameReadyList
 })
-
-# --- Inhalt Tab INFO ----------------------------------------------------------
 
 $infoText = New-Object System.Windows.Forms.TextBox
 $infoText.Multiline = $true
