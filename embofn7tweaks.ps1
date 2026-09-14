@@ -18,7 +18,8 @@ function Get-CodeHash {
 }
 
 $ValidCodeHashes = @{
-    "300BAE6EECD026A95312E77A65E2AAE2E5B4B9886817A65851066EAB49799FAC" = "Admin"
+    "cbb3984897d2d38da6b494fd105397fadde03b5e272c0cc50c9342d9f4176a74" = "Bruder"
+    "b99281fb5342d5600fdc85b8770e78d1c27912dcc38b1a53f7de4b64ce4a97e2" = "Testperson"
 }
 
 function Show-CodeGate {
@@ -109,7 +110,16 @@ function Write-Log {
 
 function Get-Backup {
     if (Test-Path $BackupFile) {
-        return Get-Content $BackupFile -Raw | ConvertFrom-Json -AsHashtable
+        $obj = Get-Content $BackupFile -Raw | ConvertFrom-Json
+        $table = @{}
+        if ($obj) {
+            $obj.PSObject.Properties | ForEach-Object {
+                $entry = @{}
+                $_.Value.PSObject.Properties | ForEach-Object { $entry[$_.Name] = $_.Value }
+                $table[$_.Name] = $entry
+            }
+        }
+        return $table
     }
     return @{}
 }
@@ -658,6 +668,7 @@ $form.BackColor       = $ColorBg
 $form.ForeColor       = $ColorText
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox     = $false
+$form.GetType().InvokeMember("DoubleBuffered", [System.Reflection.BindingFlags]"Instance,NonPublic,SetProperty", $null, $form, @($true))
 
 $title = New-Object System.Windows.Forms.Label
 $title.Text = "embofn7tweaks - SAFE / OPTIONAL / RISKY"
@@ -849,12 +860,15 @@ $listPanel.Size = New-Object System.Drawing.Size(585, 315)
 $listPanel.AutoScroll = $true
 $listPanel.BackColor = $ColorPanelBg
 $tabTweaks.Controls.Add($listPanel)
+$listPanel.GetType().InvokeMember("DoubleBuffered", [System.Reflection.BindingFlags]"Instance,NonPublic,SetProperty", $null, $listPanel, @($true))
 
 $checkBoxes = @{}
 $y = 5
 $lastTier = $null
 $tierColors = @{ "SAFE" = $ColorText; "OPTIONAL" = [System.Drawing.Color]::FromArgb(255,180,120); "RISKY" = $ColorRed }
 $tierHeaders = @{ "SAFE" = "SAFE (empfohlen, keine Nachteile)"; "OPTIONAL" = "OPTIONAL (dokumentiert, meist unproblematisch)"; "RISKY" = "RISKY - jede Zeile vorher lesen!" }
+$sharedToolTip = New-Object System.Windows.Forms.ToolTip
+$sharedToolTip.AutoPopDelay = 15000
 
 foreach ($tweak in $Tweaks) {
     $tier = if ($tweak.Tier) { $tweak.Tier } else { "SAFE" }
@@ -878,9 +892,7 @@ foreach ($tweak in $Tweaks) {
     $tooltipText = if ($tweak.Desc) { $tweak.Desc } else { "" }
     if ($tweak.Warning) { $tooltipText = "$tooltipText`r`nACHTUNG: $($tweak.Warning)".Trim() }
     if ($tooltipText -ne "") {
-        $toolTip = New-Object System.Windows.Forms.ToolTip
-        $toolTip.AutoPopDelay = 15000
-        $toolTip.SetToolTip($cb, $tooltipText)
+        $sharedToolTip.SetToolTip($cb, $tooltipText)
     }
     $listPanel.Controls.Add($cb)
     $checkBoxes[$tweak.Id] = $cb
@@ -1322,6 +1334,7 @@ $grListPanel.Size = New-Object System.Drawing.Size(580,480)
 $grListPanel.AutoScroll = $true
 $grListPanel.BackColor = $ColorPanelBg
 $tabGameReady.Controls.Add($grListPanel)
+$grListPanel.GetType().InvokeMember("DoubleBuffered", [System.Reflection.BindingFlags]"Instance,NonPublic,SetProperty", $null, $grListPanel, @($true))
 
 $grCloseBtn = New-Object System.Windows.Forms.Button
 $grCloseBtn.Text = "Close selected"
